@@ -8,22 +8,93 @@
       font-family: Arial;
       max-width: 500px;
       margin: 40px auto;
+      padding: 0 16px;
     }
     button {
       margin-top: 10px;
+      padding: 10px 20px;
+      cursor: pointer;
+      font-size: 15px;
+      border-radius: 6px;
+      border: none;
+      background: #4CAF50;
+      color: white;
+    }
+    button:disabled {
+      background: #aaa;
+      cursor: not-allowed;
+    }
+    select, input[type="text"] {
       padding: 8px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    #results {
+      background: #f4f4f4;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 15px;
+    }
+    #winner-box {
+      display: none;
+      text-align: center;
+      background: #fff8dc;
+      border: 2px solid #f0c000;
+      border-radius: 12px;
+      padding: 24px;
+      margin-top: 20px;
+      animation: pop 0.5s ease;
+    }
+    #winner-box h2 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      color: #333;
+    }
+    #winner-box .winner-name {
+      font-size: 32px;
+      font-weight: bold;
+      color: #e67e00;
+    }
+    #confetti {
+      font-size: 40px;
+      display: block;
+      margin-bottom: 8px;
+      animation: bounce 1s infinite alternate;
+    }
+    @keyframes bounce {
+      from { transform: translateY(0); }
+      to { transform: translateY(-10px); }
+    }
+    @keyframes pop {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    #status-msg {
+      color: red;
+      font-weight: bold;
+      margin-top: 8px;
+    }
+    .voted-badge {
+      display: inline-block;
+      background: #4CAF50;
+      color: white;
+      border-radius: 12px;
+      padding: 2px 10px;
+      font-size: 12px;
+      margin-left: 6px;
     }
   </style>
 </head>
-
 <body>
 
 <h2>🗳️ MPS-GIT-MANAGER Voting</h2>
-
 <p><b>Team:</b> Sumit, Sonam, Amanjeet, Aman</p>
 
 <label>Your Name:</label><br>
-<input type="text" id="voterName"><br><br>
+<input type="text" id="voterName" placeholder="Enter your name"><br><br>
 
 <label>Select Candidate 1:</label><br>
 <select id="vote1"></select><br><br>
@@ -31,22 +102,29 @@
 <label>Select Candidate 2:</label><br>
 <select id="vote2"></select><br><br>
 
-<button onclick="submitVote()">Submit Vote</button>
+<button id="submitBtn" onclick="submitVote()">Submit Vote</button>
+<div id="status-msg"></div>
 
-<h3>Results (Anonymous)</h3>
+<h3>Results <span id="vote-count-label"></span></h3>
 <pre id="results"></pre>
 
-<script>
-  // ✅ Updated Team Members
-  const members = ["Sumit", "Sonam", "Amanjeet", "Aman"];
+<div id="winner-box">
+  <span id="confetti">🎉🏆🎊</span>
+  <h2>Winner Announced!</h2>
+  <div class="winner-name" id="winner-name"></div>
+  <p style="color:#555; margin-top:8px;">Congratulations! All 4 members have voted.</p>
+</div>
 
-  let votes = JSON.parse(localStorage.getItem("votes")) || {};
-  let voters = JSON.parse(localStorage.getItem("voters")) || [];
+<script>
+  const members = ["Sumit", "Sonam", "Amanjeet", "Aman"];
+  let votes = JSON.parse(localStorage.getItem("mps_votes")) || {};
+  let voters = JSON.parse(localStorage.getItem("mps_voters")) || [];
 
   const vote1 = document.getElementById("vote1");
   const vote2 = document.getElementById("vote2");
+  const submitBtn = document.getElementById("submitBtn");
+  const statusMsg = document.getElementById("status-msg");
 
-  // Populate dropdowns
   members.forEach(m => {
     vote1.innerHTML += `<option value="${m}">${m}</option>`;
     vote2.innerHTML += `<option value="${m}">${m}</option>`;
@@ -57,55 +135,96 @@
     const v1 = vote1.value;
     const v2 = vote2.value;
 
+    statusMsg.textContent = "";
+
     if (!name) {
-      alert("Enter your name");
+      statusMsg.textContent = "⚠️ Please enter your name.";
       return;
     }
-
     if (!members.includes(name)) {
-      alert("Enter a valid team member name");
+      statusMsg.textContent = "⚠️ Name not recognized. Enter a valid team member name.";
       return;
     }
-
     if (voters.includes(name)) {
-      alert("You have already voted!");
+      statusMsg.textContent = "🚫 You have already voted! Each person can only vote once.";
       return;
     }
-
+    if (v1 === v2) {
+      statusMsg.textContent = "⚠️ Please select two different candidates.";
+      return;
+    }
     const selfVotes = [v1, v2].filter(v => v === name).length;
-
-    // if (selfVotes === 0) {
-    //   alert("You must vote for yourself once");
-    //   return;
-    // }
-
     if (selfVotes > 1) {
-      alert("You cannot vote yourself twice");
+      statusMsg.textContent = "⚠️ You cannot vote for yourself twice.";
       return;
     }
 
-    // Store votes
     votes[v1] = (votes[v1] || 0) + 1;
     votes[v2] = (votes[v2] || 0) + 1;
-
     voters.push(name);
+    localStorage.setItem("mps_votes", JSON.stringify(votes));
+    localStorage.setItem("mps_voters", JSON.stringify(voters));
 
-    localStorage.setItem("votes", JSON.stringify(votes));
-    localStorage.setItem("voters", JSON.stringify(voters));
+    statusMsg.style.color = "green";
+    statusMsg.textContent = `✅ Vote submitted! Thanks, ${name}.`;
 
-    alert("Vote submitted!");
     showResults();
+
+    if (voters.length >= members.length) {
+      freezeAndAnnounce();
+    }
   }
 
   function showResults() {
     let output = "";
     members.forEach(m => {
-      output += `${m}: ${votes[m] || 0} votes\n`;
+      const hasVoted = voters.includes(m);
+      output += `${m}: ${votes[m] || 0} vote(s)${hasVoted ? " ✓" : ""}\n`;
     });
     document.getElementById("results").textContent = output;
+    document.getElementById("vote-count-label").textContent =
+      `(${voters.length}/${members.length} voted)`;
   }
 
+  function freezeAndAnnounce() {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Voting Closed";
+    document.getElementById("voterName").disabled = true;
+    vote1.disabled = true;
+    vote2.disabled = true;
+
+    // Find winner (highest votes)
+    let maxVotes = -1;
+    let winner = "";
+    members.forEach(m => {
+      if ((votes[m] || 0) > maxVotes) {
+        maxVotes = votes[m] || 0;
+        winner = m;
+      }
+    });
+
+    // Handle tie
+    const tied = members.filter(m => (votes[m] || 0) === maxVotes);
+    const winnerBox = document.getElementById("winner-box");
+    const winnerName = document.getElementById("winner-name");
+
+    if (tied.length > 1) {
+      winnerName.textContent = tied.join(" & ") + " 🤝 (Tie!)";
+    } else {
+      winnerName.textContent = winner + " 🥇";
+    }
+
+    winnerBox.style.display = "block";
+    winnerBox.scrollIntoView({ behavior: "smooth" });
+  }
+
+  // On load: restore state
   showResults();
+  if (voters.length >= members.length) {
+    freezeAndAnnounce();
+    statusMsg.style.color = "#555";
+    statusMsg.textContent = "Voting is complete.";
+  }
 </script>
 
 </body>
