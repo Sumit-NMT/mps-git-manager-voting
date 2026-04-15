@@ -149,10 +149,10 @@
       statusMsg.textContent = "🚫 You have already voted! Each person can only vote once.";
       return;
     }
-    if (v1 === v2) {
-      statusMsg.textContent = "⚠️ Please select two different candidates.";
-      return;
-    }
+    // if (v1 === v2) {
+    //   statusMsg.textContent = "⚠️ Please select two different candidates.";
+    //   return;
+    // }
     const selfVotes = [v1, v2].filter(v => v === name).length;
     if (selfVotes > 1) {
       statusMsg.textContent = "⚠️ You cannot vote for yourself twice.";
