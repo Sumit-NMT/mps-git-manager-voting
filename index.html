@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MPS-GIT-MANAGER Voting</title>
+  <style>
+    body {
+      font-family: Arial;
+      max-width: 500px;
+      margin: 40px auto;
+    }
+    button {
+      margin-top: 10px;
+      padding: 8px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h2>🗳️ MPS-GIT-MANAGER Voting</h2>
+
+<p><b>Team:</b> Sumit, Sonam, Amanjeet, Aman</p>
+
+<label>Your Name:</label><br>
+<input type="text" id="voterName"><br><br>
+
+<label>Select Candidate 1:</label><br>
+<select id="vote1"></select><br><br>
+
+<label>Select Candidate 2:</label><br>
+<select id="vote2"></select><br><br>
+
+<button onclick="submitVote()">Submit Vote</button>
+
+<h3>Results (Anonymous)</h3>
+<pre id="results"></pre>
+
+<script>
+  // ✅ Updated Team Members
+  const members = ["Sumit", "Sonam", "Amanjeet", "Aman"];
+
+  let votes = JSON.parse(localStorage.getItem("votes")) || {};
+  let voters = JSON.parse(localStorage.getItem("voters")) || [];
+
+  const vote1 = document.getElementById("vote1");
+  const vote2 = document.getElementById("vote2");
+
+  // Populate dropdowns
+  members.forEach(m => {
+    vote1.innerHTML += `<option value="${m}">${m}</option>`;
+    vote2.innerHTML += `<option value="${m}">${m}</option>`;
+  });
+
+  function submitVote() {
+    const name = document.getElementById("voterName").value.trim();
+    const v1 = vote1.value;
+    const v2 = vote2.value;
+
+    if (!name) {
+      alert("Enter your name");
+      return;
+    }
+
+    if (!members.includes(name)) {
+      alert("Enter a valid team member name");
+      return;
+    }
+
+    if (voters.includes(name)) {
+      alert("You have already voted!");
+      return;
+    }
+
+    const selfVotes = [v1, v2].filter(v => v === name).length;
+
+    // if (selfVotes === 0) {
+    //   alert("You must vote for yourself once");
+    //   return;
+    // }
+
+    if (selfVotes > 1) {
+      alert("You cannot vote yourself twice");
+      return;
+    }
+
+    // Store votes
+    votes[v1] = (votes[v1] || 0) + 1;
+    votes[v2] = (votes[v2] || 0) + 1;
+
+    voters.push(name);
+
+    localStorage.setItem("votes", JSON.stringify(votes));
+    localStorage.setItem("voters", JSON.stringify(voters));
+
+    alert("Vote submitted!");
+    showResults();
+  }
+
+  function showResults() {
+    let output = "";
+    members.forEach(m => {
+      output += `${m}: ${votes[m] || 0} votes\n`;
+    });
+    document.getElementById("results").textContent = output;
+  }
+
+  showResults();
+</script>
+
+</body>
+</html>
